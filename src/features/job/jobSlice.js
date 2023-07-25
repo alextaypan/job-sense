@@ -57,6 +57,23 @@ export const deleteJob = createAsyncThunk(
   }
 );
 
+export const editJob = createAsyncThunk(
+  "job/editJob",
+  async ({ jobId, job }, { rejectWithValue, getState, dispatch }) => {
+    try {
+      const response = await customFetch.patch(`/jobs/${jobId}`, job, {
+        headers: {
+          authorization: `Bearer ${getState().user.user.token}`,
+        },
+      });
+      dispatch(clearValues());
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(error.response.data.msg);
+    }
+  }
+);
+
 const jobSlice = createSlice({
   name: "job",
   initialState,
@@ -69,6 +86,9 @@ const jobSlice = createSlice({
         ...initialState,
         jobLocation: getUserFromLocalStorage()?.location || "",
       };
+    },
+    setEditJob: (state, { payload }) => {
+      return { ...state, isEditing: true, ...payload };
     },
   },
   extraReducers: (builder) => {
@@ -89,10 +109,21 @@ const jobSlice = createSlice({
       })
       .addCase(deleteJob.rejected, (state, { payload }) => {
         toast.error(payload);
+      })
+      .addCase(editJob.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(editJob.fulfilled, (state) => {
+        state.isLoading = false;
+        toast.success("Job modified...");
+      })
+      .addCase(editJob.rejected, (state, { payload }) => {
+        state.isLoading = false;
+        toast.error(payload);
       });
   },
 });
 
-export const { handleChange, clearValues } = jobSlice.actions;
+export const { handleChange, clearValues, setEditJob } = jobSlice.actions;
 
 export default jobSlice.reducer;
