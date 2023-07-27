@@ -1,8 +1,7 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import { toast } from "react-toastify";
-import customFetch from "../../utils/axios";
+import customFetch, { checkForUnauthorizedResponse } from "../../utils/axios";
 import { getUserFromLocalStorage } from "../../utils/localStorage";
-import { logoutUser } from "../user/userSlice";
 import { getAllJobs, hideLoading } from "../allJobs/allJobsSlice";
 
 const initialState = {
@@ -20,7 +19,8 @@ const initialState = {
 
 export const createJob = createAsyncThunk(
   "job/createJob",
-  async (job, { rejectWithValue, getState, dispatch }) => {
+  async (job, thunkAPI) => {
+    const { getState, dispatch } = thunkAPI;
     try {
       const response = await customFetch.post("/jobs", job, {
         headers: {
@@ -30,18 +30,15 @@ export const createJob = createAsyncThunk(
       dispatch(clearValues());
       return response.data;
     } catch (error) {
-      if (error.response.status === 401) {
-        dispatch(logoutUser());
-        return rejectWithValue("Unauthorized! Logging out...");
-      }
-      return rejectWithValue(error.response.data.msg);
+      return checkForUnauthorizedResponse(error, thunkAPI);
     }
   }
 );
 
 export const deleteJob = createAsyncThunk(
   "job/deleteJob",
-  async (jobId, { rejectWithValue, getState, dispatch }) => {
+  async (jobId, thunkAPI) => {
+    const { getState, dispatch } = thunkAPI;
     try {
       const response = await customFetch.delete(`/jobs/${jobId}`, {
         headers: {
@@ -52,14 +49,15 @@ export const deleteJob = createAsyncThunk(
       return response.data.msg;
     } catch (error) {
       dispatch(hideLoading());
-      return rejectWithValue(error.response.data.msg);
+      return checkForUnauthorizedResponse(error, thunkAPI);
     }
   }
 );
 
 export const editJob = createAsyncThunk(
   "job/editJob",
-  async ({ jobId, job }, { rejectWithValue, getState, dispatch }) => {
+  async ({ jobId, job }, thunkAPI) => {
+    const { getState, dispatch } = thunkAPI;
     try {
       const response = await customFetch.patch(`/jobs/${jobId}`, job, {
         headers: {
@@ -69,7 +67,7 @@ export const editJob = createAsyncThunk(
       dispatch(clearValues());
       return response.data;
     } catch (error) {
-      return rejectWithValue(error.response.data.msg);
+      return checkForUnauthorizedResponse(error, thunkAPI);
     }
   }
 );

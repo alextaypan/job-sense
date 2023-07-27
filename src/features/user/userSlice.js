@@ -1,11 +1,13 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import { toast } from "react-toastify";
-import customFetch from "../../utils/axios";
+import customFetch, { checkForUnauthorizedResponse } from "../../utils/axios";
 import {
   addUserToLocalStorage,
   getUserFromLocalStorage,
   removeUserFromLocalStorage,
 } from "../../utils/localStorage";
+import { clearAllJobsState } from "../allJobs/allJobsSlice";
+import { clearValues } from "../job/jobSlice";
 
 const initialState = {
   isLoading: false,
@@ -15,31 +17,32 @@ const initialState = {
 
 export const registerUser = createAsyncThunk(
   "user/registerUser",
-  async (user, { rejectWithValue }) => {
+  async (user, thunkAPI) => {
     try {
       const response = await customFetch.post("/auth/register", user);
       return response.data;
     } catch (error) {
-      return rejectWithValue(error.response.data.msg);
+      return checkForUnauthorizedResponse(error, thunkAPI);
     }
   }
 );
 
 export const loginUser = createAsyncThunk(
   "user/loginUser",
-  async (user, { rejectWithValue }) => {
+  async (user, thunkAPI) => {
     try {
       const response = await customFetch.post("/auth/login", user);
       return response.data;
     } catch (error) {
-      return rejectWithValue(error.response.data.msg);
+      return checkForUnauthorizedResponse(error, thunkAPI);
     }
   }
 );
 
 export const updateUser = createAsyncThunk(
   "user/updateUser",
-  async (user, { rejectWithValue, getState, dispatch }) => {
+  async (user, thunkAPI) => {
+    const { getState } = thunkAPI;
     try {
       const response = await customFetch.patch("/auth/updateUser", user, {
         headers: {
@@ -48,11 +51,21 @@ export const updateUser = createAsyncThunk(
       });
       return response.data;
     } catch (error) {
-      if (error.response.status === 401) {
-        dispatch(logoutUser());
-        return rejectWithValue("Unauthorized! Logging out...");
-      }
-      return rejectWithValue(error.response.data.msg);
+      return checkForUnauthorizedResponse(error, thunkAPI);
+    }
+  }
+);
+
+export const clearStore = createAsyncThunk(
+  "user/clearStore",
+  async (message, { dispatch }) => {
+    try {
+      dispatch(logoutUser(message));
+      dispatch(clearAllJobsState());
+      dispatch(clearValues());
+      return Promise.resolve();
+    } catch (error) {
+      return Promise.reject();
     }
   }
 );
@@ -116,6 +129,9 @@ const userSlice = createSlice({
       .addCase(updateUser.rejected, (state, { payload }) => {
         state.isLoading = false;
         toast.error(payload);
+      })
+      .addCase(clearStore.rejected, () => {
+        toast.error("There was an error");
       });
   },
 });

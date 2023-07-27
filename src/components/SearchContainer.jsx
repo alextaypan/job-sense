@@ -1,5 +1,4 @@
 import { useDispatch, useSelector } from "react-redux";
-import customFetch from "../utils/axios";
 import { FormRow, FormRowSelect } from ".";
 import Wrapper from "../assets/wrappers/SearchContainer";
 import { clearFilters, handleChange } from "../features/allJobs/allJobsSlice";
@@ -11,6 +10,7 @@ const SearchContainer = () => {
   const dispatch = useDispatch();
 
   const handleSearch = (e) => {
+    if (isLoading) return;
     dispatch(handleChange({ name: e.target.name, value: e.target.value }));
   };
   const handleSubmit = (e) => {

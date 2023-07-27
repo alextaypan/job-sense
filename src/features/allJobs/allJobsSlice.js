@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import { toast } from "react-toastify";
-import customFetch from "../../utils/axios";
+import customFetch, { checkForUnauthorizedResponse } from "../../utils/axios";
 
 const initialFiltersState = {
   search: "",
@@ -23,23 +23,30 @@ const initialState = {
 
 export const getAllJobs = createAsyncThunk(
   "allJobs/getJobs",
-  async (_, { getState, rejectWithValue }) => {
+  async (_, thunkAPI) => {
+    const { getState } = thunkAPI;
+    const { page, search, searchStatus, searchType, sort } = getState().allJobs;
+    let url = `/jobs?status=${searchStatus}&jobType=${searchType}&sort=${sort}&page=${page}`;
+    if (search) {
+      url = url + `&search=${search}`;
+    }
     try {
-      const response = await customFetch.get("/jobs", {
+      const response = await customFetch.get(url, {
         headers: {
           authorization: `Bearer ${getState().user.user.token}`,
         },
       });
       return response.data;
     } catch (error) {
-      return rejectWithValue(error.response.data.msg);
+      return checkForUnauthorizedResponse(error, thunkAPI);
     }
   }
 );
 
 export const showStats = createAsyncThunk(
   "allJobs/showStats",
-  async (_, { getState, rejectWithValue }) => {
+  async (_, thunkAPI) => {
+    const { getState } = thunkAPI;
     try {
       const response = await customFetch.get("/jobs/stats", {
         headers: {
@@ -48,7 +55,7 @@ export const showStats = createAsyncThunk(
       });
       return response.data;
     } catch (error) {
-      return rejectWithValue(error.response.data.msg);
+      return checkForUnauthorizedResponse(error, thunkAPI);
     }
   }
 );
@@ -64,6 +71,7 @@ const allJobsSlice = createSlice({
       state.isLoading = false;
     },
     handleChange: (state, { payload: { name, value } }) => {
+      state.page = 1;
       state[name] = value;
     },
     clearFilters: (state) => {
@@ -72,6 +80,7 @@ const allJobsSlice = createSlice({
     changePage: (state, { payload }) => {
       state.page = payload;
     },
+    clearAllJobsState: () => initialState,
   },
   extraReducers: (builder) => {
     builder
@@ -109,6 +118,7 @@ export const {
   handleChange,
   clearFilters,
   changePage,
+  clearAllJobsState,
 } = allJobsSlice.actions;
 
 export default allJobsSlice.reducer;
