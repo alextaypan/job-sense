@@ -1,4 +1,3 @@
-/* eslint-disable react/prop-types */
 const FormRowSelect = ({ labelText, name, value, handleChange, list }) => {
   return (
     <div className="form-row">
